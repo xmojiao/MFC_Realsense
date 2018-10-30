@@ -329,8 +329,8 @@ void AlgorithmDetect::startDetectFromFile()
 		//	}
 		//}
 
-			//使用ransac找到平面外和平面内的点
-	std:vector<int> inliers;
+		//使用ransac找到平面外和平面内的点
+		std:vector<int> inliers;
 		pcl::SampleConsensusModelPlane<pcl::PointXYZ>::Ptr model_p(new pcl::SampleConsensusModelPlane<pcl::PointXYZ>(cloud));
 		pcl::RandomSampleConsensus<pcl::PointXYZ> ransac(model_p);
 		ransac.setDistanceThreshold(mBarrierHeightThresh);
