@@ -489,16 +489,32 @@ void AlgorithmDetect::startDetectFromFile()
 		Eigen::MatrixXf T_wc = matrix_pw * matrix_pc.inverse();
 		cout << "T_wc" << T_wc << endl;
 		cout << "T_cw" << T_wc.inverse()<< endl;
-		Eigen::Vector4f pc1;
-		pc1 << x0, y0, z0, 1;
-		Eigen::Vector4f pc2;
-		pc2 << x0 + 1, y0, z0, 1;
-		Eigen::Vector4f pc3;
-		pc3 << x0, y0 - 1, z0 + 1, 1;
-		Eigen::Matrix <float, 4, 1> result = T_wc.cast<float>() * pc1;
-		cout << "pw1" << result << endl;
-		cout << "pw2"<<T_wc.cast<float>() * pc2 <<endl;
-		cout << "pw3" << T_wc.cast<float>() * pc3 << endl;
+		Eigen::Vector4f standard;
+		standard << 0, 0, 0, 1;
+		Eigen::Vector4f  current=T_wc.row(3);
+		cout << current << standard;
+		if (current == standard)
+		{
+			Eigen::MatrixXf R = T_wc.block(0, 0, 3, 3);
+			Eigen::Vector3f T = T_wc.block(0, 3, 3, 1);
+			cout << R << endl;
+			cout << T << endl;
+			Eigen::Vector3f pc1;
+			pc1 << x0, y0, z0;
+			Eigen::Vector4f pc2;
+			pc2 << x0 + 1, y0, z0, 1;
+			Eigen::Vector4f pc3;
+			pc3 << x0, y0 - 1, z0 + 1, 1;
+			Eigen::Matrix <float, 3, 1> result = R.cast<float>() * pc1+ T;
+			cout << "pw1" << result << endl;
+			cout << "pw2" << T_wc.cast<float>() * pc2 << endl;
+			cout << "pw3" << T_wc.cast<float>() * pc3 << endl;
+		}
+		else
+		{
+			cout << "¾ØÕó·Ö½â´íÎó£¡";
+		}
+
 	
 		viewer.spinOnce(1, false);
 	}
