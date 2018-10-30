@@ -465,12 +465,44 @@ void AlgorithmDetect::startDetectFromFile()
 		viewer.addLine(pcl::PointXYZ(0, 0, 0), pcl::PointXYZ(1,0,0),"line1");
 		viewer.addLine(pcl::PointXYZ(0, 0, 0), pcl::PointXYZ(0,1,0), "line2");
 		viewer.addLine(pcl::PointXYZ(0, 0, 0), pcl::PointXYZ(0,0,1), "line3");
+		float a = coef[0];float b = coef[1];float c = coef[2];float d = coef[3];
+		float x0 = -a * d / (a * a + b * b + c * c);
+		float y0 = -b * d / (a * a + b * b + c * c);
+		float z0 = -c * d / (a * a + b * b + c * c);
 		//ZÖá£º (0,0,0)-> (-ad/(a*a+b*b+c*c),-bd/(a*a+b*b+c*c),-cd/(a*a+b*b+c*c))
-		viewer.addLine(pcl::PointXYZ(0, 0, 0), pcl::PointXYZ(-coef[0] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2]), -coef[1] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2]), -coef[2] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2])), "line4");
+		//-coef[0] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2]), -coef[1] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2]), -coef[2] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2])
+		viewer.addLine(pcl::PointXYZ(0, 0, 0), pcl::PointXYZ(x0,y0,z0), "line4");
 		//XÖá£º (-ad/(a*a+b*b+c*c),-bd/(a*a+b*b+c*c),-cd/(a*a+b*b+c*c)) -> (-ad/(a*a+b*b+c*c)+1,-bd/(a*a+b*b+c*c),-cd/(a*a+b*b+c*c))
-		viewer.addLine(pcl::PointXYZ(-coef[0] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2]), -coef[1] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2]), -coef[2] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2])), pcl::PointXYZ(-coef[0] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2])+1, -coef[1] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2]), -coef[2] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2])), "line5");
+		viewer.addLine(pcl::PointXYZ(x0,y0,z0), pcl::PointXYZ(x0+1, y0, z0),"line5");
 		//YÖá£º (-ad/(a*a+b*b+c*c),-bd/(a*a+b*b+c*c),-cd/(a*a+b*b+c*c)) -> (-ad/(a*a+b*b+c*c),-bd/(a*a+b*b+c*c)-1,-cd/(a*a+b*b+c*c)+1)
-		viewer.addLine(pcl::PointXYZ(-coef[0] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2]), -coef[1] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2]), -coef[2] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2])), pcl::PointXYZ(-coef[0] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2]) , -coef[1] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2])-1, -coef[2] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2]) + 1), "line6");
+		viewer.addLine(pcl::PointXYZ(x0,y0,z0), pcl::PointXYZ(x0, y0-1, z0+1), "line6");
+		Eigen::MatrixXf matrix_pc(4, 4);
+		matrix_pc << x0, x0 + 1, x0, 0,
+			y0, y0, y0 - 1, 0,
+			z0, z0, z0 + 1, 0,
+			1, 1, 1, 1;
+		Eigen::MatrixXf matrix_pw(4, 4);
+		matrix_pw << 0, 1, 0, 0,
+			0, 0, sqrt(2), 0,
+			0, 0, 0, sqrt(x0*x0 + y0 * y0 + z0 * z0),
+			1, 1, 1, 1;
+		Eigen::MatrixXf T_wc = matrix_pw * matrix_pc.inverse();
+		cout << "T_wc" << T_wc << endl;
+		cout << "T_cw" << T_wc.inverse()<< endl;
+		//Eigen::MatrixXf matrix_pc(4,3);
+		//matrix_pc << -coef[0] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2]), -coef[1] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2]), -coef[2] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2]),
+		//	-coef[0] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2]) + 1, -coef[1] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2]), -coef[2] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2]),
+		//	-coef[0] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2]), -coef[1] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2]) - 1, -coef[2] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2]) + 1,
+		//	1, 1, 1;
+		//Eigen::MatrixXf matrix_pw(4, 3);
+		//matrix_pw << 0, 0, 0,
+		//	1, 0, 0,
+		//	0, sqrt(2), 0,
+		//	1, 1, 1;
+		//Eigen::MatrixXf T_wc = matrix_pw * matrix_pc.inverse();
+		//cout << "T_wc" << T_wc << endl;
+		//cout << "T_cw" << T_wc.inverse()<< endl;
+
 
 		viewer.spinOnce(1, false);
 	}
