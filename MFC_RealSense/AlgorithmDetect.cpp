@@ -489,21 +489,17 @@ void AlgorithmDetect::startDetectFromFile()
 		Eigen::MatrixXf T_wc = matrix_pw * matrix_pc.inverse();
 		cout << "T_wc" << T_wc << endl;
 		cout << "T_cw" << T_wc.inverse()<< endl;
-		//Eigen::MatrixXf matrix_pc(4,3);
-		//matrix_pc << -coef[0] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2]), -coef[1] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2]), -coef[2] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2]),
-		//	-coef[0] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2]) + 1, -coef[1] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2]), -coef[2] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2]),
-		//	-coef[0] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2]), -coef[1] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2]) - 1, -coef[2] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2]) + 1,
-		//	1, 1, 1;
-		//Eigen::MatrixXf matrix_pw(4, 3);
-		//matrix_pw << 0, 0, 0,
-		//	1, 0, 0,
-		//	0, sqrt(2), 0,
-		//	1, 1, 1;
-		//Eigen::MatrixXf T_wc = matrix_pw * matrix_pc.inverse();
-		//cout << "T_wc" << T_wc << endl;
-		//cout << "T_cw" << T_wc.inverse()<< endl;
-
-
+		Eigen::Vector4f pc1;
+		pc1 << x0, y0, z0, 1;
+		Eigen::Vector4f pc2;
+		pc2 << x0 + 1, y0, z0, 1;
+		Eigen::Vector4f pc3;
+		pc3 << x0, y0 - 1, z0 + 1, 1;
+		Eigen::Matrix <float, 4, 1> result = T_wc.cast<float>() * pc1;
+		cout << "pw1" << result << endl;
+		cout << "pw2"<<T_wc.cast<float>() * pc2 <<endl;
+		cout << "pw3" << T_wc.cast<float>() * pc3 << endl;
+	
 		viewer.spinOnce(1, false);
 	}
 	//algoCtrl = false;
