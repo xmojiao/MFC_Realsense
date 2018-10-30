@@ -1,9 +1,8 @@
 /x64
-/pointcloudProcss
 /Debug
-/ConsoleApplication1
+/Release
 /.vs
-/MFC_RealSense/Debug
-/MFC_RealSense/res
 /MFC_RealSense/x64
-*.txt
+/MFC_RealSense/Debug
+/MFC_RealSense/Release
+/MFC_RealSense/*.txt
