@@ -117,7 +117,7 @@ void AlgorithmDetect::startDetect()
 	//}
 
 		//使用ransac找到平面外和平面内的点
-	    std:vector<int> inliers;
+	    std::vector<int> inliers;
 		pcl::SampleConsensusModelPlane<pcl::PointXYZ>::Ptr model_p(new pcl::SampleConsensusModelPlane<pcl::PointXYZ>(cloud));
 		pcl::RandomSampleConsensus<pcl::PointXYZ> ransac(model_p);
 		ransac.setDistanceThreshold(mBarrierHeightThresh);
@@ -135,7 +135,6 @@ void AlgorithmDetect::startDetect()
 			if (step >= inliers.size())
 			{
 				outLiers.push_back(i);
-				//break;
 				continue;
 			}
 				
@@ -257,6 +256,269 @@ void AlgorithmDetect::startDetect()
 	//algoCtrl = false;
 }
 
+//void AlgorithmDetect::startDetectFromFile1()
+//{
+//	pcl::PointCloud<pcl::PointXYZ> cloudFile;
+//	pcl::io::loadPCDFile("origin_data.pcd", cloudFile);
+//	pcl::visualization::PCLVisualizer viewer("cloud");
+//	viewer.setBackgroundColor(1.0f, 1.0f, 1.0f, 0);
+//	while (algoCtrl)
+//	{
+//		vector<pcl::PointXYZ> vp3fFilter;
+//		for (int i = 0; i < cloudFile.size() - mDownSampleRate; i = i + mDownSampleRate)
+//		{
+//			if (cloudFile[i].x == 0 || cloudFile[i].y == 0 || cloudFile[i].z == 0)
+//				continue;
+//
+//			if (norm2(Point3f(cloudFile[i].x, cloudFile[i].y, cloudFile[i].z)) > mDistanceThresh ||
+//				abs(cloudFile[i].x) > mSideThresh)
+//				continue;
+//
+//			vp3fFilter.push_back(cloudFile[i]);
+//		}
+//		cout << "the size of filtered point cloud is : " << vp3fFilter.size() << endl;
+//		if (vp3fFilter.size() < 100)
+//			continue;
+//
+//		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>); // 创建点云（指针）  
+//		cloud->width = vp3fFilter.size();
+//		cloud->height = 1;
+//		cloud->is_dense = false;
+//		cloud->resize(cloud->width * cloud->height);
+//		for (size_t i = 0; i < vp3fFilter.size(); i++)
+//		{
+//			cloud->points[i].x = vp3fFilter[i].x;
+//			cloud->points[i].y = vp3fFilter[i].y;
+//			cloud->points[i].z = vp3fFilter[i].z;
+//		}
+//		//平滑
+//		//pcl::PointCloud<pcl::PointXYZ>::Ptr cloudMls(new pcl::PointCloud<pcl::PointXYZ>); // 创建点云（指针）  
+//		//pcl::MovingLeastSquares<pcl::PointXYZ, pcl::PointXYZ> mls;
+//		//mls.setInputCloud(cloud);
+//		//pcl::search::KdTree<pcl::PointXYZ>::Ptr treeMls(new pcl::search::KdTree<pcl::PointXYZ>);
+//		//mls.setSearchMethod(treeMls);
+//		//mls.setPolynomialFit(true);
+//		//mls.setPolynomialOrder(4);
+//		//mls.setComputeNormals(false);
+//		//mls.setSearchRadius(8);
+//		//mls.setUpsamplingMethod(mls.SAMPLE_LOCAL_PLANE);
+//		//mls.setUpsamplingRadius(10);
+//		//mls.setUpsamplingStepSize(4.5);
+//		//mls.process(*cloudMls);
+//
+//		//过滤
+//		/*pcl::PointCloud<pcl::PointXYZ>::Ptr cloudFilterd(new pcl::PointCloud<pcl::PointXYZ>);
+//		pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
+//		sor.setInputCloud(cloudMls);
+//		sor.setMeanK(50);
+//		sor.setStddevMulThresh(0.5);
+//		sor.filter(*cloudFilterd);
+//		std::cout << "Cloud after filter:" << cloud->size() - cloudFilterd->size() << endl;*/
+//
+//		/*if (NUM == 5)
+//		{
+//			std::string filename("text.pcb");
+//			pcl::PCDWriter writer;
+//			writer.write(filename, *cloud);
+//		}*/
+//		//	pcl::visualization::CloudViewer viewer("Simple Cloud Viewer");
+//		//	viewer.showCloud(cloud);
+//		//	while (!viewer.wasStopped())
+//		//	{
+//		//	}
+//		//}
+//
+//		//使用ransac找到平面外和平面内的点
+//		std:vector<int> inliers;
+//		pcl::SampleConsensusModelPlane<pcl::PointXYZ>::Ptr model_p(new pcl::SampleConsensusModelPlane<pcl::PointXYZ>(cloud));
+//		pcl::RandomSampleConsensus<pcl::PointXYZ> ransac(model_p);
+//		ransac.setDistanceThreshold(mBarrierHeightThresh);
+//		ransac.computeModel();
+//		ransac.getInliers(inliers);
+//
+//		Eigen::VectorXf coef = Eigen::VectorXf::Zero(4, 1);
+//		ransac.getModelCoefficients(coef);
+//		cout << coef[0] << " " << coef[1] << " " << coef[2] << " " << coef[3] << endl;
+//
+//		vector<int> outLiers;
+//		size_t step = 0;
+//		for (size_t i = 0; i < cloud->size(); i++)
+//		{
+//			if (step >= inliers.size())
+//			{
+//				outLiers.push_back(i);
+//				continue;
+//			}
+//			if (i != inliers[step])
+//			{
+//				outLiers.push_back(i);
+//			}
+//			else
+//			{
+//				step++;
+//			}
+//			//cout << "i " << i << endl;
+//			//cout << "step " << step << endl;
+//			//cout << "vp3fFilter.size() " << vp3fFilter.size() << endl;
+//		}
+//		pcl::PointCloud<pcl::PointXYZ>::Ptr inlierCloud(new pcl::PointCloud<pcl::PointXYZ>);
+//		pcl::PointCloud<pcl::PointXYZ>::Ptr outLiersCloud(new pcl::PointCloud<pcl::PointXYZ>);
+//		inlierCloud->resize(inliers.size());
+//		outLiersCloud->resize(outLiers.size());
+//		pcl::copyPointCloud(*cloud, inliers, *inlierCloud);
+//		pcl::copyPointCloud(*cloud, outLiers, *outLiersCloud);
+//
+//		cout << "the num of inlier points is:  " << inliers.size() << endl;
+//		cout << "the num of outLiers points is:  " << outLiers.size() << endl;
+//
+//		if (outLiers.size() == 0)
+//			continue;
+//
+//		//聚类
+//		pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
+//		tree->setInputCloud(outLiersCloud);
+//		std::vector<pcl::PointIndices> cluster_indices;
+//		pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
+//		ec.setClusterTolerance(0.02); // 2cm
+//		ec.setMinClusterSize(100);
+//		ec.setMaxClusterSize(25000);
+//		ec.setSearchMethod(tree);
+//		ec.setInputCloud(outLiersCloud);
+//		ec.extract(cluster_indices);
+//		cout << "the number of cluster type is: " << cluster_indices.size() << endl;
+//
+//		//统计字子点云像素点个数
+//		vector<vector<Point3f> > vvp3fSubSet;
+//		for (size_t i = 0; i < cluster_indices.size(); i++)
+//		{
+//			vector<Point3f> temp;
+//			for (size_t j = 0; j < cluster_indices[i].indices.size(); j++)
+//			{
+//				int index = cluster_indices[i].indices[j];
+//				float x = outLiersCloud->points[index].x;
+//				float y = outLiersCloud->points[index].y;
+//				float z = outLiersCloud->points[index].z;
+//				temp.push_back(Point3f(x, y, z));
+//			}
+//			vvp3fSubSet.push_back(temp);
+//			//cout << "sub point cloud size is: " << temp.size() << endl;
+//		}
+//		//for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin(); it != cluster_indices.end(); ++it)
+//		//{
+//		//	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster(new pcl::PointCloud<pcl::PointXYZ>);
+//		//	for (std::vector<int>::const_iterator pit = it->indices.begin(); pit != it->indices.end(); ++pit)
+//		//		cloud_cluster->points.push_back(outLiersCloud->points[*pit]); //*
+//		//	cloud_cluster->width = cloud_cluster->points.size();
+//		//	cloud_cluster->height = 1;
+//		//	cloud_cluster->is_dense = true;
+//		//	std::cout << "PointCloud representing the Cluster: " 
+//		//		<< cloud_cluster->points.size() << " data points." << std::endl;
+//		//}
+//
+//		//通过pcl的viewer显示
+//		viewer.removeAllPointClouds();
+//		viewer.removeAllShapes();
+//
+//		string strCloudID = "Cloud";
+//		string strBoxID = "Box";
+//		vector<float> vfDis;
+//		for (size_t i = 0; i < cluster_indices.size(); i++)
+//		{
+//			pcl::PointCloud<pcl::PointXYZ>::Ptr temp(new pcl::PointCloud<pcl::PointXYZ>);
+//			pcl::copyPointCloud(*outLiersCloud, cluster_indices[i], *temp);
+//			pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> source_cloud_color_handler(temp, abs((51 * i) % 255), abs((255 - 51 * i) % 255), abs((51 * i) % 255));
+//			strCloudID = strCloudID + to_string(i);
+//			strBoxID = strBoxID + to_string(i);
+//			viewer.addPointCloud(temp, source_cloud_color_handler, strCloudID);
+//			if (showBox)
+//			{
+//				vector<float> vbox;
+//				getBoundingBox(vvp3fSubSet[i], vbox);
+//				viewer.addCube(vbox[MIN_X], vbox[MAX_X], vbox[MIN_Y], vbox[MAX_Y],
+//					vbox[MIN_Z], vbox[MAX_Z], 255, 255, 255, strBoxID);
+//			}
+//			float D = getNearestDis(vvp3fSubSet[i]);
+//			//cout << "the distance between robot and barrier " << i << " is " << D << endl;
+//			vfDis.push_back(D);
+//		}
+//		//viewer.removeAllPointClouds();
+//		//viewer.removeAllShapes();
+//
+//		if (showPlane)
+//		{
+//			pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
+//			coefficients->values.push_back(coef[0]);
+//			coefficients->values.push_back(coef[1]);
+//			coefficients->values.push_back(coef[2]);
+//			coefficients->values.push_back(coef[3]);
+//			viewer.addPlane(*coefficients, "cloud");
+//		}
+//
+//
+//		pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> source_cloud_color_handler1(inlierCloud, 255, 0, 0);
+//		//pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> source_cloud_color_handler2(outLiersCloud, 0, 255, 0);
+//	
+//		viewer.addPointCloud(inlierCloud, source_cloud_color_handler1, "cloud1");
+//		//viewer.addPointCloud(outLiersCloud, source_cloud_color_handler2, "cloud");
+//		//viewer.add coef[0], coef[1], -(coef[3]+ coef[0]* coef[0]+ coef[1] * coef[1])/ coef[2])
+//		viewer.addLine(pcl::PointXYZ(0, 0, 0), pcl::PointXYZ(1,0,0),"line1");
+//		viewer.addLine(pcl::PointXYZ(0, 0, 0), pcl::PointXYZ(0,1,0), "line2");
+//		viewer.addLine(pcl::PointXYZ(0, 0, 0), pcl::PointXYZ(0,0,1), "line3");
+//		float a = coef[0];float b = coef[1];float c = coef[2];float d = coef[3];
+//		float x0 = -a * d / (a * a + b * b + c * c);
+//		float y0 = -b * d / (a * a + b * b + c * c);
+//		float z0 = -c * d / (a * a + b * b + c * c);
+//		//Z轴： (0,0,0)-> (-ad/(a*a+b*b+c*c),-bd/(a*a+b*b+c*c),-cd/(a*a+b*b+c*c))
+//		//-coef[0] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2]), -coef[1] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2]), -coef[2] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2])
+//		viewer.addLine(pcl::PointXYZ(0, 0, 0), pcl::PointXYZ(x0,y0,z0), "line4");
+//		//X轴： (-ad/(a*a+b*b+c*c),-bd/(a*a+b*b+c*c),-cd/(a*a+b*b+c*c)) -> (-ad/(a*a+b*b+c*c)+1,-bd/(a*a+b*b+c*c),-cd/(a*a+b*b+c*c))
+//		viewer.addLine(pcl::PointXYZ(x0,y0,z0), pcl::PointXYZ(x0+1, y0, z0),"line5");
+//		//Y轴： (-ad/(a*a+b*b+c*c),-bd/(a*a+b*b+c*c),-cd/(a*a+b*b+c*c)) -> (-ad/(a*a+b*b+c*c),-bd/(a*a+b*b+c*c)-1,-cd/(a*a+b*b+c*c)+1)
+//		viewer.addLine(pcl::PointXYZ(x0,y0,z0), pcl::PointXYZ(x0, y0-1, z0+1), "line6");
+//		Eigen::MatrixXf matrix_pc(4, 4);
+//		matrix_pc << x0, x0 + 1, x0, 0,
+//			y0, y0, y0 - 1, 0,
+//			z0, z0, z0 + 1, 0,
+//			1, 1, 1, 1;
+//		Eigen::MatrixXf matrix_pw(4, 4);
+//		matrix_pw << 0, 1, 0, 0,
+//			0, 0, sqrt(2), 0,
+//			0, 0, 0, sqrt(x0*x0 + y0 * y0 + z0 * z0),
+//			1, 1, 1, 1;
+//		Eigen::MatrixXf T_wc = matrix_pw * matrix_pc.inverse();
+//		cout << "T_wc" << T_wc << endl;
+//		cout << "T_cw" << T_wc.inverse()<< endl;
+//		//Eigen::Vector4f standard;
+//		//standard << 0, 0, 0, 1;
+//		//Eigen::Vector4f  current=T_wc.row(3);
+//		//cout << current << standard;
+//		if (Eigen::Vector4f(T_wc.row(3))== Eigen::Vector4f(0, 0, 0, 1))
+//		{
+//			Eigen::MatrixXf R = T_wc.block(0, 0, 3, 3);
+//			Eigen::Vector3f T = T_wc.block(0, 3, 3, 1);
+//			cout << R << endl;
+//			cout << T << endl;
+//			Eigen::Vector3f pc1;
+//			pc1 << x0, y0, z0;
+//			Eigen::Vector4f pc2;
+//			pc2 << x0 + 1, y0, z0, 1;
+//			Eigen::Vector4f pc3;
+//			pc3 << x0, y0 - 1, z0 + 1, 1;
+//			Eigen::Matrix <float, 3, 1> result = R.cast<float>() * pc1+ T;
+//			cout << "pw1" << result << endl;
+//			cout << "pw2" << T_wc.cast<float>() * pc2 << endl;
+//			cout << "pw3" << T_wc.cast<float>() * pc3 << endl;
+//		}
+//		else
+//		{
+//			cout << "矩阵分解错误！";
+//		}
+//
+//	
+//		viewer.spinOnce(1, false);
+//	}
+//	//algoCtrl = false;
+//}
 void AlgorithmDetect::startDetectFromFile()
 {
 	pcl::PointCloud<pcl::PointXYZ> cloudFile;
@@ -265,7 +527,7 @@ void AlgorithmDetect::startDetectFromFile()
 	viewer.setBackgroundColor(1.0f, 1.0f, 1.0f, 0);
 	while (algoCtrl)
 	{
-		vector<pcl::PointXYZ> vp3fFilter;
+		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
 		for (int i = 0; i < cloudFile.size() - mDownSampleRate; i = i + mDownSampleRate)
 		{
 			if (cloudFile[i].x == 0 || cloudFile[i].y == 0 || cloudFile[i].z == 0)
@@ -274,24 +536,12 @@ void AlgorithmDetect::startDetectFromFile()
 			if (norm2(Point3f(cloudFile[i].x, cloudFile[i].y, cloudFile[i].z)) > mDistanceThresh ||
 				abs(cloudFile[i].x) > mSideThresh)
 				continue;
-
-			vp3fFilter.push_back(cloudFile[i]);
+			cloud->points.push_back(cloudFile[i]);
 		}
-		cout << "the size of filtered point cloud is : " << vp3fFilter.size() << endl;
-		if (vp3fFilter.size() < 100)
+		cout << "the size of filtered point cloud is : " << cloud->size() << endl;
+		if (cloud->size() < 100)
 			continue;
 
-		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>); // 创建点云（指针）  
-		cloud->width = vp3fFilter.size();
-		cloud->height = 1;
-		cloud->is_dense = false;
-		cloud->resize(cloud->width * cloud->height);
-		for (size_t i = 0; i < vp3fFilter.size(); i++)
-		{
-			cloud->points[i].x = vp3fFilter[i].x;
-			cloud->points[i].y = vp3fFilter[i].y;
-			cloud->points[i].z = vp3fFilter[i].z;
-		}
 		//平滑
 		//pcl::PointCloud<pcl::PointXYZ>::Ptr cloudMls(new pcl::PointCloud<pcl::PointXYZ>); // 创建点云（指针）  
 		//pcl::MovingLeastSquares<pcl::PointXYZ, pcl::PointXYZ> mls;
@@ -316,12 +566,6 @@ void AlgorithmDetect::startDetectFromFile()
 		sor.filter(*cloudFilterd);
 		std::cout << "Cloud after filter:" << cloud->size() - cloudFilterd->size() << endl;*/
 
-		/*if (NUM == 5)
-		{
-			std::string filename("text.pcb");
-			pcl::PCDWriter writer;
-			writer.write(filename, *cloud);
-		}*/
 		//	pcl::visualization::CloudViewer viewer("Simple Cloud Viewer");
 		//	viewer.showCloud(cloud);
 		//	while (!viewer.wasStopped())
@@ -330,16 +574,12 @@ void AlgorithmDetect::startDetectFromFile()
 		//}
 
 		//使用ransac找到平面外和平面内的点
-		std:vector<int> inliers;
+		std::vector<int> inliers;
 		pcl::SampleConsensusModelPlane<pcl::PointXYZ>::Ptr model_p(new pcl::SampleConsensusModelPlane<pcl::PointXYZ>(cloud));
 		pcl::RandomSampleConsensus<pcl::PointXYZ> ransac(model_p);
 		ransac.setDistanceThreshold(mBarrierHeightThresh);
 		ransac.computeModel();
 		ransac.getInliers(inliers);
-
-		Eigen::VectorXf coef = Eigen::VectorXf::Zero(4, 1);
-		ransac.getModelCoefficients(coef);
-		cout << coef[0] << " " << coef[1] << " " << coef[2] << " " << coef[3] << endl;
 
 		vector<int> outLiers;
 		size_t step = 0;
@@ -358,10 +598,75 @@ void AlgorithmDetect::startDetectFromFile()
 			{
 				step++;
 			}
-			//cout << "i " << i << endl;
-			//cout << "step " << step << endl;
-			//cout << "vp3fFilter.size() " << vp3fFilter.size() << endl;
 		}
+		Eigen::VectorXf coef = Eigen::VectorXf::Zero(4, 1);
+		ransac.getModelCoefficients(coef);
+		cout << coef[0] << " " << coef[1] << " " << coef[2] << " " << coef[3] << endl;
+
+		
+		//计算旋转矩阵R T
+		float a = coef[0];float b = coef[1];float c = coef[2];float d = coef[3];
+		float x0 = -a * d / (a * a + b * b + c * c);
+		float y0 = -b * d / (a * a + b * b + c * c);
+		float z0 = -c * d / (a * a + b * b + c * c);
+		Eigen::MatrixXf matrix_pc(4, 4);
+		matrix_pc << x0, x0 + 1, x0, 0,
+			y0, y0, y0 - 1, 0,
+			z0, z0, z0 + 1, 0,
+			1, 1, 1, 1;
+		Eigen::MatrixXf matrix_pw(4, 4);
+		matrix_pw << 0, 1, 0, 0,
+			0, 0, sqrt(2), 0,
+			0, 0, 0, sqrt(x0*x0 + y0 * y0 + z0 * z0),
+			1, 1, 1, 1;
+
+		Eigen::MatrixXf T_wc = matrix_pw * matrix_pc.inverse();
+		cout << "T_wc" << T_wc << endl;
+		//cout << "T_cw" << T_wc.inverse() << endl;
+
+		if (Eigen::Vector4f(T_wc.row(3)) == Eigen::Vector4f(0, 0, 0, 1))
+		{
+			Eigen::MatrixXf R = T_wc.block(0, 0, 3, 3);
+			Eigen::Vector3f T = T_wc.block(0, 3, 3, 1);
+			//cout << R << endl;
+			//cout << T << endl;
+
+			pcl::PointCloud<pcl::PointXYZ>::Ptr cloudW(new pcl::PointCloud<pcl::PointXYZ>);
+			for (size_t i = 0; i < 4;i++)//cloud->size(); i++)
+			{
+				Eigen::Vector3f point;
+				point << cloud->points[i].x, cloud->points[i].y, cloud->points[i].z;
+				Eigen::Matrix <float, 3, 1> result = R.cast<float>() *point + T;
+				cout << "result" << result << endl;
+				cout << "result0" << result[0] << endl;
+				cout << "result0" << result[1] << endl;
+				cout << "result0" << result[2] << endl;
+				//cloudW->points[i].x = result[0]; //pcl::PointXYZ(result);
+				//cloudW->points[i].y = result[1];
+				//cloudW->points[i].z = result[2];
+
+				//cout << "输出" << endl << cloudW->points[i] << endl;
+				//cout << "result" << result << endl;
+			}
+			Eigen::Vector3f pc1;
+			pc1 << x0, y0, z0;
+			Eigen::Vector4f pc2;
+			pc2 << x0 + 1, y0, z0, 1;
+			Eigen::Vector4f pc3;
+			pc3 << x0, y0 - 1, z0 + 1, 1;
+			Eigen::Matrix <float, 3, 1> result = R.cast<float>() * pc1 + T;
+			cout << "pw1" << result << endl;
+			//cout << "pw2" << T_wc.cast<float>() * pc2 << endl;
+			//cout << "pw3" << T_wc.cast<float>() * pc3 << endl;
+		}
+		else
+		{
+			cout << "矩阵分解错误！";
+		}
+
+
+
+
 		pcl::PointCloud<pcl::PointXYZ>::Ptr inlierCloud(new pcl::PointCloud<pcl::PointXYZ>);
 		pcl::PointCloud<pcl::PointXYZ>::Ptr outLiersCloud(new pcl::PointCloud<pcl::PointXYZ>);
 		inlierCloud->resize(inliers.size());
@@ -458,64 +763,25 @@ void AlgorithmDetect::startDetectFromFile()
 
 		pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> source_cloud_color_handler1(inlierCloud, 255, 0, 0);
 		//pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> source_cloud_color_handler2(outLiersCloud, 0, 255, 0);
-	
+
 		viewer.addPointCloud(inlierCloud, source_cloud_color_handler1, "cloud1");
 		//viewer.addPointCloud(outLiersCloud, source_cloud_color_handler2, "cloud");
 		//viewer.add coef[0], coef[1], -(coef[3]+ coef[0]* coef[0]+ coef[1] * coef[1])/ coef[2])
-		viewer.addLine(pcl::PointXYZ(0, 0, 0), pcl::PointXYZ(1,0,0),"line1");
-		viewer.addLine(pcl::PointXYZ(0, 0, 0), pcl::PointXYZ(0,1,0), "line2");
-		viewer.addLine(pcl::PointXYZ(0, 0, 0), pcl::PointXYZ(0,0,1), "line3");
-		float a = coef[0];float b = coef[1];float c = coef[2];float d = coef[3];
-		float x0 = -a * d / (a * a + b * b + c * c);
-		float y0 = -b * d / (a * a + b * b + c * c);
-		float z0 = -c * d / (a * a + b * b + c * c);
+		viewer.addLine(pcl::PointXYZ(0, 0, 0), pcl::PointXYZ(1, 0, 0), "line1");
+		viewer.addLine(pcl::PointXYZ(0, 0, 0), pcl::PointXYZ(0, 1, 0), "line2");
+		viewer.addLine(pcl::PointXYZ(0, 0, 0), pcl::PointXYZ(0, 0, 1), "line3");
+		
 		//Z轴： (0,0,0)-> (-ad/(a*a+b*b+c*c),-bd/(a*a+b*b+c*c),-cd/(a*a+b*b+c*c))
 		//-coef[0] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2]), -coef[1] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2]), -coef[2] * coef[3] / (coef[0] * coef[0] + coef[1] * coef[1] + coef[2] * coef[2])
-		viewer.addLine(pcl::PointXYZ(0, 0, 0), pcl::PointXYZ(x0,y0,z0), "line4");
+		viewer.addLine(pcl::PointXYZ(0, 0, 0), pcl::PointXYZ(x0, y0, z0), "line4");
 		//X轴： (-ad/(a*a+b*b+c*c),-bd/(a*a+b*b+c*c),-cd/(a*a+b*b+c*c)) -> (-ad/(a*a+b*b+c*c)+1,-bd/(a*a+b*b+c*c),-cd/(a*a+b*b+c*c))
-		viewer.addLine(pcl::PointXYZ(x0,y0,z0), pcl::PointXYZ(x0+1, y0, z0),"line5");
+		viewer.addLine(pcl::PointXYZ(x0, y0, z0), pcl::PointXYZ(x0 + 1, y0, z0), "line5");
 		//Y轴： (-ad/(a*a+b*b+c*c),-bd/(a*a+b*b+c*c),-cd/(a*a+b*b+c*c)) -> (-ad/(a*a+b*b+c*c),-bd/(a*a+b*b+c*c)-1,-cd/(a*a+b*b+c*c)+1)
-		viewer.addLine(pcl::PointXYZ(x0,y0,z0), pcl::PointXYZ(x0, y0-1, z0+1), "line6");
-		Eigen::MatrixXf matrix_pc(4, 4);
-		matrix_pc << x0, x0 + 1, x0, 0,
-			y0, y0, y0 - 1, 0,
-			z0, z0, z0 + 1, 0,
-			1, 1, 1, 1;
-		Eigen::MatrixXf matrix_pw(4, 4);
-		matrix_pw << 0, 1, 0, 0,
-			0, 0, sqrt(2), 0,
-			0, 0, 0, sqrt(x0*x0 + y0 * y0 + z0 * z0),
-			1, 1, 1, 1;
-		Eigen::MatrixXf T_wc = matrix_pw * matrix_pc.inverse();
-		cout << "T_wc" << T_wc << endl;
-		cout << "T_cw" << T_wc.inverse()<< endl;
-		Eigen::Vector4f standard;
-		standard << 0, 0, 0, 1;
-		Eigen::Vector4f  current=T_wc.row(3);
-		cout << current << standard;
-		if (current == standard)
-		{
-			Eigen::MatrixXf R = T_wc.block(0, 0, 3, 3);
-			Eigen::Vector3f T = T_wc.block(0, 3, 3, 1);
-			cout << R << endl;
-			cout << T << endl;
-			Eigen::Vector3f pc1;
-			pc1 << x0, y0, z0;
-			Eigen::Vector4f pc2;
-			pc2 << x0 + 1, y0, z0, 1;
-			Eigen::Vector4f pc3;
-			pc3 << x0, y0 - 1, z0 + 1, 1;
-			Eigen::Matrix <float, 3, 1> result = R.cast<float>() * pc1+ T;
-			cout << "pw1" << result << endl;
-			cout << "pw2" << T_wc.cast<float>() * pc2 << endl;
-			cout << "pw3" << T_wc.cast<float>() * pc3 << endl;
-		}
-		else
-		{
-			cout << "矩阵分解错误！";
-		}
+		viewer.addLine(pcl::PointXYZ(x0, y0, z0), pcl::PointXYZ(x0, y0 - 1, z0 + 1), "line6");
+		
 
-	
+
+
 		viewer.spinOnce(1, false);
 	}
 	//algoCtrl = false;
