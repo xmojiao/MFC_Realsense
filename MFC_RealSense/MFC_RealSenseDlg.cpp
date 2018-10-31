@@ -72,6 +72,7 @@ void CMFC_RealSenseDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Radio(pDX, IDC_RADIO1, mDownSampleType);
 	DDX_Check(pDX, IDC_CHECKBOX, isShowCube);
 	DDX_Check(pDX, IDC_CHECKBOX2, isShowPlane);
+	DDX_Control(pDX, IDCANCEL, IsSaveheight);
 }
 
 BEGIN_MESSAGE_MAP(CMFC_RealSenseDlg, CDialogEx)

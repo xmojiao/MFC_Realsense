@@ -66,4 +66,6 @@ public:
 	BOOL isShowPlane;
 	afx_msg void OnBnClickedCheckbox2();
 	afx_msg void OnEnChangeEdit1();
+	// 是否保存数据
+	CButton IsSaveheight;
 };
