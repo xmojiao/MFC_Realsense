@@ -209,7 +209,7 @@ void threadProc(LPVOID IpParamater)
 
 void CMFC_RealSenseDlg::funcProc()
 {
-	algo.startDetectFromFile();
+	algo.startDetect();//FromFile();
 	mBtnStart.SetWindowText(_T("¿ªÊ¼¼ì²â"));
 }
 

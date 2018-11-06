@@ -22,6 +22,8 @@ void AlgorithmDetect::startDetect()
 	unsigned long long NUM = 0;
 	pcl::visualization::PCLVisualizer viewer("cloud");
 	viewer.setBackgroundColor(1.0f,1.0f,1.0f, 0);
+	ofstream outfile;
+	outfile.open("heightMapFromCamera.txt");
 	while (algoCtrl)
 	{
 		auto frames = pipe.wait_for_frames();//获取相机图像（rgb&depth）
@@ -56,7 +58,7 @@ void AlgorithmDetect::startDetect()
 		//	pcl::io::savePCDFile("origin_data.pcd", *cloudFile);
 		//}
 		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>); // 创建点云（指针）  
-		for (size_t i = 0; i < points.size() - mDownSampleRate; i = i + mDownSampleRate)
+		for (size_t i = 0; i < points.size(); i = i + 1) // mDownSampleRate
 		{
 			if (vertices[i].x == 0 || vertices[i].y == 0 || vertices[i].z == 0)
 				continue;
@@ -66,43 +68,27 @@ void AlgorithmDetect::startDetect()
 				continue;
 			cloud->points.push_back(pcl::PointXYZ(vertices[i].x, vertices[i].y, vertices[i].z));
 		}
+		cloud->width = cloud->size();
+		cloud->height = 1;
+		cloud->is_dense = false;
+		//cloudFile->resize(cloudFile->width * cloudFile->height);
 		cout << "the size of filtered point cloud is : " << cloud->size() << endl;
 		if (cloud->size() < 100)
 			continue;
-		//平滑
-		//pcl::PointCloud<pcl::PointXYZ>::Ptr cloudMls(new pcl::PointCloud<pcl::PointXYZ>); // 创建点云（指针）  
-		//pcl::MovingLeastSquares<pcl::PointXYZ, pcl::PointXYZ> mls;
-		//mls.setInputCloud(cloud);
-		//pcl::search::KdTree<pcl::PointXYZ>::Ptr treeMls(new pcl::search::KdTree<pcl::PointXYZ>);
-		//mls.setSearchMethod(treeMls);
-		//mls.setPolynomialFit(true);
-		//mls.setPolynomialOrder(4);
-		//mls.setComputeNormals(false);
-		//mls.setSearchRadius(8);
-		//mls.setUpsamplingMethod(mls.SAMPLE_LOCAL_PLANE);
-		//mls.setUpsamplingRadius(10);
-		//mls.setUpsamplingStepSize(4.5);
-		//mls.process(*cloudMls);
 
-		//过滤
-		/*pcl::PointCloud<pcl::PointXYZ>::Ptr cloudFilterd(new pcl::PointCloud<pcl::PointXYZ>);
-		pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
-		sor.setInputCloud(cloudMls);
-		sor.setMeanK(50);
-		sor.setStddevMulThresh(0.5);
-		sor.filter(*cloudFilterd);
-		std::cout << "Cloud after filter:" << cloud->size() - cloudFilterd->size() << endl;*/
-
-	//	pcl::visualization::CloudViewer viewer("Simple Cloud Viewer");
-	//	viewer.showCloud(cloud);
-	//	while (!viewer.wasStopped())
-	//	{
-	//	}
-	//}
+		//pcl::PointCloud<pcl::PointXYZ>::Ptr cloudFilterd(new pcl::PointCloud<pcl::PointXYZ>);
+		//cloudFilterd = cloud;
+		//下采样
+		pcl::PointCloud<pcl::PointXYZ>::Ptr cloudFilterd(new pcl::PointCloud<pcl::PointXYZ>);
+		pcl::VoxelGrid<pcl::PointXYZ>sorV;
+		sorV.setInputCloud(cloud);
+		sorV.setLeafSize(0.008f, 0.008f, 0.008f);
+		sorV.filter(*cloudFilterd);
+		cout << "The size of fliter sorV: " << cloud->size() - cloudFilterd->size() << " ,cloudFilterd->size():" << cloudFilterd->size() << endl;
 
 		//使用ransac找到平面外和平面内的点
 	    std::vector<int> inliers;
-		pcl::SampleConsensusModelPlane<pcl::PointXYZ>::Ptr model_p(new pcl::SampleConsensusModelPlane<pcl::PointXYZ>(cloud));
+		pcl::SampleConsensusModelPlane<pcl::PointXYZ>::Ptr model_p(new pcl::SampleConsensusModelPlane<pcl::PointXYZ>(cloudFilterd));
 		pcl::RandomSampleConsensus<pcl::PointXYZ> ransac(model_p);
 		ransac.setDistanceThreshold(mBarrierHeightThresh);
 		ransac.computeModel();
@@ -111,27 +97,7 @@ void AlgorithmDetect::startDetect()
 		Eigen::VectorXf coef = Eigen::VectorXf::Zero(4, 1);
 		ransac.getModelCoefficients(coef);
 		cout << coef[0] << " " << coef[1] << " " << coef[2] << " " << coef[3] << endl;
-		vector<int> outLiers;
-		size_t step = 0;
-		for (size_t i = 0; i < cloud->size(); i++)
-		{
-			if (step >= inliers.size())
-			{
-				outLiers.push_back(i);
-				continue;
-			}			
-			if (i != inliers[step])
-			{
-				outLiers.push_back(i);
-			}
-			else
-			{
-				step++;
-			}
-			//cout << "i " << i << endl;
-			//cout << "step " << step << endl;
-			//cout << "vp3fFilter.size() " << vp3fFilter.size() << endl;
-		}
+		
 		//计算旋转矩阵R T
 		float a = coef[0];float b = coef[1];float c = coef[2];float d = coef[3];
 		float x0 = -a * d / (a * a + b * b + c * c);
@@ -154,20 +120,81 @@ void AlgorithmDetect::startDetect()
 		pcl::PointCloud<pcl::PointXYZ>::Ptr cloudW(new pcl::PointCloud<pcl::PointXYZ>);
 		if (Eigen::Vector4f(T_wc.row(3)) == Eigen::Vector4f(0, 0, 0, 1))
 		{
+			//pcl::PointCloud<pcl::PointXYZ>::Ptr cloudFile(new pcl::PointCloud<pcl::PointXYZ>); // 创建点云（指针）  
+			//cloudFile->width = height * width;
+			//cloudFile->height = 1;
+			//cloudFile->is_dense = false;
+			//cloudFile->resize(cloudFile->width * cloudFile->height);
+			//for (size_t i = 0; i < cloudFile->size(); i++)
+			//{
+			//	cloudFile->points[i].x = vertices[i].x;
+			//	cloudFile->points[i].y = vertices[i].y;
+			//	cloudFile->points[i].z = vertices[i].z;
+			//}
+			
 			Eigen::MatrixXf R = T_wc.block(0, 0, 3, 3);
 			Eigen::Vector3f T = T_wc.block(0, 3, 3, 1);
-			cloudW->width = cloud->width;
+			cloudW->width = cloudFilterd->width;
 			cloudW->height = 1;
 			cloudW->is_dense = false;
-			cloudW->resize(cloud->size());
-			for (size_t i = 0; i < cloud->size();i++)//cloud->size(); i++)
+			cloudW->resize(cloudFilterd->size());
+			for (size_t i = 0; i < cloudFilterd->size();i++)//cloud->size(); i++)
 			{
 				Eigen::Vector3f point;
-				point << cloud->points[i].x, cloud->points[i].y, cloud->points[i].z;
+				point << cloudFilterd->points[i].x, cloudFilterd->points[i].y, cloudFilterd->points[i].z;
 				Eigen::Matrix <float, 3, 1> result = R.cast<float>() *point + T;
 				cloudW->points[i].x = result[0]; //pcl::PointXYZ(result);
 				cloudW->points[i].y = result[1];
 				cloudW->points[i].z = result[2];
+			}
+			pcl::io::savePCDFile("world_data_"+ to_string(NUM)+".pcd", *cloudW);
+			cout << "world_data_" + to_string(NUM) + ".pcd" << endl;
+			pcl::io::savePCDFile("Filter_data_" + to_string(NUM) + ".pcd", *cloudFilterd);
+			pcl::io::savePCDFile("Origin_data_" + to_string(NUM) + ".pcd", *cloud);
+			
+			vector<int> outLiers;
+			size_t step = 0;
+			for (size_t i = 0; i < cloudFilterd->size(); i++)
+			{
+				if (step >= inliers.size())
+				{
+					outLiers.push_back(i);
+					if (showBox)
+					{
+						string str0;
+						str0 += to_string(cloudW->points[i].x) + "," + to_string(cloudW->points[i].y) + "," + to_string(cloudW->points[i].z) + "\n";
+						outfile << str0;
+					}
+					continue;
+				}
+				if (i != inliers[step])
+				{
+					outLiers.push_back(i);
+					if (showBox)
+					{
+						string str0;
+						str0 += to_string(cloudW->points[i].x) + "," + to_string(cloudW->points[i].y) + "," + to_string(cloudW->points[i].z) + "\n";
+						outfile << str0;
+					}
+				}
+				else
+				{
+					step++;
+					if (showBox)
+					{
+						string str0;
+						str0 += to_string(cloudW->points[i].x) + "," + to_string(cloudW->points[i].y) + "," + to_string(0) + "\n";
+						outfile << str0;
+					}
+				}
+				//cout << "i " << i << endl;
+				//cout << "step " << step << endl;
+				//cout << "vp3fFilter.size() " << vp3fFilter.size() << endl;
+			}
+			if (showBox)
+			{
+				outfile.close();
+				showBox = 0;
 			}
 			pcl::PointCloud<pcl::PointXYZ>::Ptr inlierCloud(new pcl::PointCloud<pcl::PointXYZ>);
 			pcl::PointCloud<pcl::PointXYZ>::Ptr outLiersCloud(new pcl::PointCloud<pcl::PointXYZ>);
@@ -209,7 +236,7 @@ void AlgorithmDetect::startDetect()
 					temp.push_back(Point3f(x, y, z));
 				}
 				vvp3fSubSet.push_back(temp);
-				cout << "sub point cloud size is: " << temp.size() << endl;
+				cout << "sub point cloudFilterd size is: " << temp.size() << endl;
 			}
 			//for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin(); it != cluster_indices.end(); ++it)
 			//{
@@ -238,13 +265,13 @@ void AlgorithmDetect::startDetect()
 				strCloudID = strCloudID + to_string(i);
 				strBoxID = strBoxID + to_string(i);
 				viewer.addPointCloud(temp, source_cloud_color_handler, strCloudID);
-				if (showBox)
+				/*if (showBox)
 				{
 					vector<float> vbox;
 					getBoundingBox(vvp3fSubSet[i], vbox);
 					viewer.addCube(vbox[MIN_X], vbox[MAX_X], vbox[MIN_Y], vbox[MAX_Y],
 						vbox[MIN_Z], vbox[MAX_Z], 255, 255, 255, strBoxID);
-				}
+				}*/
 				float D = getNearestDis(vvp3fSubSet[i]);
 				cout << "the distance between robot and barrier " << i << " is " << D << endl;
 				vfDis.push_back(D);
@@ -555,23 +582,45 @@ void AlgorithmDetect::startDetectFromFile()
 	bool flag=1;
 	ofstream outfile;
 	outfile.open("heightMap.txt");
+
 	while (algoCtrl)
 	{
+		int recordx = 0;int recordy = 0;int recordz = 0;
+		int recordDis = 0;int recordSide = 0;int allPoint = 0;
 		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
-		for (int i = 0; i < cloudFile.size() - mDownSampleRate; i = i + mDownSampleRate)
+		for (int i = 0; i < cloudFile.size(); i = i+1)
 		{
-			if (cloudFile[i].x == 0 || cloudFile[i].y == 0 || cloudFile[i].z == 0)
+			allPoint += 1;
+			if (cloudFile[i].z == 0)
+			{
+				recordz += 1;
+				//cout << cloudFile[i] << endl;
 				continue;
-
-			if (norm2(Point3f(cloudFile[i].x, cloudFile[i].y, cloudFile[i].z)) > mDistanceThresh ||
-				abs(cloudFile[i].x) > mSideThresh)
+			}			
+			if (norm2(Point3f(cloudFile[i].x, cloudFile[i].y, cloudFile[i].z)) > mDistanceThresh)
+			{
+				recordDis += 1;
 				continue;
+			} 
+			if (abs(cloudFile[i].x) > mSideThresh)
+			{
+				recordSide += 1;
+				continue;
+			}			
 			cloud->points.push_back(cloudFile[i]);
 		}
-		cout << "the size of filtered point cloud is : " << cloud->size() << endl;
+		/*pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZ>);
+		pcl::Voxel*/
+		cout << "mDownSampleRate:" << mDownSampleRate <<", cloudFile.size() - mDownSampleRate:"<< cloudFile.size() - mDownSampleRate<<endl;
+		cout << "X filter:" << recordx << " ,Y filter: " << recordy << " ,Zfilter: " << recordz<<endl;
+		cout << "Distance filter: " << recordDis << " ,Side filter: " << recordSide << endl;
+		cout << "Origin PointCloud: "<< cloudFile.size() <<" ,PointCloud filtered: " << cloud->size() << endl;
+		cout << "The size of fliter: " << cloudFile.size() - cloud->size() << endl;
+		cout << "All point of filter: " << recordx + recordy + recordz + recordDis + recordSide <<" ,all Points:"<< allPoint << endl;
 		if (cloud->size() < 100)
 			continue;
-
+		//pcl::PointCloud<pcl::PointXYZ>::Ptr cloudFilterd(new pcl::PointCloud<pcl::PointXYZ>);
+		//cloudFilterd = cloud;
 		////平滑
 		//pcl::PointCloud<pcl::PointXYZ>::Ptr cloudMls(new pcl::PointCloud<pcl::PointXYZ>); // 创建点云（指针）  
 		//pcl::MovingLeastSquares<pcl::PointXYZ, pcl::PointXYZ> mls;
@@ -587,30 +636,47 @@ void AlgorithmDetect::startDetectFromFile()
 		//mls.setUpsamplingStepSize(4.5);
 		//mls.process(*cloudMls);
 
-		//过滤
-		/*pcl::PointCloud<pcl::PointXYZ>::Ptr cloudFilterd(new pcl::PointCloud<pcl::PointXYZ>);
-		pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
-		sor.setInputCloud(cloudMls);
-		sor.setMeanK(50);
-		sor.setStddevMulThresh(0.5);
-		sor.filter(*cloudFilterd);
-		std::cout << "Cloud after filter:" << cloud->size() - cloudFilterd->size() << endl;*/
-
-		//	pcl::visualization::CloudViewer viewer("Simple Cloud Viewer");
-		//	viewer.showCloud(cloud);
-		//	while (!viewer.wasStopped())
+		////过滤
+		//pcl::PointCloud<pcl::PointXYZ>::Ptr cloudFilterd(new pcl::PointCloud<pcl::PointXYZ>);
+		//pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
+		//sor.setInputCloud(cloud);
+		//sor.setMeanK(50);
+		//sor.setStddevMulThresh(1);
+		//sor.filter(*cloudFilterd);
+		//std::cout << "Cloud after filter:" << cloud->size() - cloudFilterd->size() <<" ,cloudFilterd->size():"<< cloudFilterd->size() << endl;
+		//for (size_t i = 0; i < cloudFilterd->size();i++)//cloud->size(); i++)
+		//{
+		//	pcl::PointXYZ pointT = cloudFilterd->points[i];
+		//	/*if (i % 100 == 0)
 		//	{
-		//	}
+		//		cout << "i: " << i << " ,cloudFilterd->points[i]:" << cloudFilterd->points[i] << endl;
+		//	}*/
+		//	
 		//}
+		//viewer.removeAllPointClouds();
+		//viewer.removeAllShapes();
+		//pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> source_cloud_color_handler1(cloud, 255, 0, 0);
+		//viewer.addPointCloud(cloud, source_cloud_color_handler1, "cloud1");
+		//viewer.addLine(pcl::PointXYZ(0, 0, 0), pcl::PointXYZ(1, 0, 0), "line1");
+		//viewer.addLine(pcl::PointXYZ(0, 0, 0), pcl::PointXYZ(0, 1, 0), "line2");
+		//viewer.addLine(pcl::PointXYZ(0, 0, 0), pcl::PointXYZ(0, 0, 1), "line3");
+		//viewer.spinOnce(1, false);
+
+		//下采样
+		pcl::PointCloud<pcl::PointXYZ>::Ptr cloudFilterd(new pcl::PointCloud<pcl::PointXYZ>);
+		pcl::VoxelGrid<pcl::PointXYZ>sorV;
+		sorV.setInputCloud(cloud);
+		sorV.setLeafSize(0.008f, 0.008f, 0.008f);
+		sorV.filter(*cloudFilterd);
+		cout << "The size of fliter sorV: " << cloud->size() - cloudFilterd->size() <<" ,cloudFilterd->size():" << cloudFilterd->size() << endl;
 
 		//使用ransac找到平面外和平面内的点
 		std::vector<int> inliers;
-		pcl::SampleConsensusModelPlane<pcl::PointXYZ>::Ptr model_p(new pcl::SampleConsensusModelPlane<pcl::PointXYZ>(cloud));
+		pcl::SampleConsensusModelPlane<pcl::PointXYZ>::Ptr model_p(new pcl::SampleConsensusModelPlane<pcl::PointXYZ>(cloudFilterd));
 		pcl::RandomSampleConsensus<pcl::PointXYZ> ransac(model_p);
 		ransac.setDistanceThreshold(mBarrierHeightThresh);
 		ransac.computeModel();
 		ransac.getInliers(inliers);
-
 
 		Eigen::VectorXf coef = Eigen::VectorXf::Zero(4, 1);
 		ransac.getModelCoefficients(coef);
@@ -635,30 +701,28 @@ void AlgorithmDetect::startDetectFromFile()
 
 		Eigen::MatrixXf T_wc = matrix_pw * matrix_pc.inverse();
 		cout << "T_wc" << T_wc << endl;
-		//cout << "T_cw" << T_wc.inverse() << endl;
+		cout << "T_cw" << T_wc.inverse() << endl;
 		pcl::PointCloud<pcl::PointXYZ>::Ptr cloudW(new pcl::PointCloud<pcl::PointXYZ>);
 		if (Eigen::Vector4f(T_wc.row(3)) == Eigen::Vector4f(0, 0, 0, 1))
 		{
 			Eigen::MatrixXf R = T_wc.block(0, 0, 3, 3);
 			Eigen::Vector3f T = T_wc.block(0, 3, 3, 1);
 			
-			cloudW->width = cloud->width;
+			cloudW->width = cloudFilterd->width;
 			cloudW->height = 1;
 			cloudW->is_dense = false;
-			cloudW->resize(cloud->size());
-			for (size_t i = 0; i < cloud->size();i++)//cloud->size(); i++)
+			cloudW->resize(cloudFilterd->size());
+			for (size_t i = 0; i < cloudFilterd->size();i++)//cloud->size(); i++)
 			{
 				Eigen::Vector3f point;
-				point << cloud->points[i].x, cloud->points[i].y, cloud->points[i].z;
+				point << cloudFilterd->points[i].x, cloudFilterd->points[i].y, cloudFilterd->points[i].z;
 				Eigen::Matrix <float, 3, 1> result = R.cast<float>() *point + T;
 				cloudW->points[i].x = result[0]; //pcl::PointXYZ(result);
 				cloudW->points[i].y = result[1];
 				cloudW->points[i].z = result[2];
-
 				//cout << "输出" << endl << cloudW->points[i] << endl;
 				//cout << "result" << result << endl;
 			}
-
 		}
 		else
 		{
@@ -694,13 +758,13 @@ void AlgorithmDetect::startDetectFromFile()
 			}
 			else
 			{
+				step++;
 				if (flag == 1)
 				{
 					string str0;
 					str0 += to_string(cloudW->points[i].x) + "," + to_string(cloudW->points[i].y) + "," + to_string(0) + "\n";
 					outfile << str0;
-				}
-				step++;
+				}				
 			}
 		}
 		if (flag == 1)
@@ -780,13 +844,13 @@ void AlgorithmDetect::startDetectFromFile()
 			strCloudID = strCloudID + to_string(i);
 			strBoxID = strBoxID + to_string(i);
 			viewer.addPointCloud(temp, source_cloud_color_handler, strCloudID);
-			if (showBox)
-			{
-				vector<float> vbox;
-				getBoundingBox(vvp3fSubSet[i], vbox);
-				viewer.addCube(vbox[MIN_X], vbox[MAX_X], vbox[MIN_Y], vbox[MAX_Y],
-					vbox[MIN_Z], vbox[MAX_Z], 255, 255, 255, strBoxID);
-			}
+			//if (showBox)
+			//{
+			//	vector<float> vbox;
+			//	getBoundingBox(vvp3fSubSet[i], vbox);
+			//	viewer.addCube(vbox[MIN_X], vbox[MAX_X], vbox[MIN_Y], vbox[MAX_Y],
+			//		vbox[MIN_Z], vbox[MAX_Z], 255, 255, 255, strBoxID);
+			//}
 			float D = getNearestDis(vvp3fSubSet[i]);
 			//cout << "the distance between robot and barrier " << i << " is " << D << endl;
 			vfDis.push_back(D);

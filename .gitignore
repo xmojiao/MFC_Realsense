@@ -6,3 +6,4 @@
 /MFC_RealSense/Debug
 /MFC_RealSense/Release
 /MFC_RealSense/*.txt
+*.pcd

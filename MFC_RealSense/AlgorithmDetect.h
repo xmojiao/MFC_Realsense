@@ -31,6 +31,8 @@
 #include <pcl/segmentation/extract_clusters.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/statistical_outlier_removal.h>
+
+#include <pcl/filters/voxel_grid.h>
 #include <pcl/surface/mls.h>
 
 
